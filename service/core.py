@@ -12,6 +12,7 @@ import aioamqp
 import logging
 
 from .errors import ServiceError
+from .helpers import path_to_routing_key
 
 
 class Service:
@@ -83,7 +84,7 @@ class Service:
         await self.command_channel.exchange_declare(self.rpc_exchange_name, type_name="direct", durable=True)
         await self.command_channel.queue_declare(self.command_queue_name, durable=True)
         await self.command_channel.queue_bind(self.command_queue_name, exchange_name=self.rpc_exchange_name, routing_key=self.command_queue_name)
-        await self.command_channel.basic_consume(self._on_command, queue_name=self.command_queue_name)
+        await self.command_channel.basic_consume(self._on_command, queue_name=self.command_queue_name, no_ack=True)
 
         # setup connection to the response channel and queue.
         _, self.response_protocol = await aioamqp.connect(broker)
@@ -91,7 +92,7 @@ class Service:
 
         await self.response_channel.queue_declare(self.response_queue_name, durable=True, exclusive=True)
         await self.response_channel.queue_bind(self.response_queue_name, exchange_name=self.rpc_exchange_name, routing_key="")
-        await self.response_channel.basic_consume(self._on_response, queue_name=self.response_queue_name)
+        await self.response_channel.basic_consume(self._on_response, queue_name=self.response_queue_name, no_ack=True)
 
         # setup connection to the commands channel and queue.
         _, self.event_protocol = await aioamqp.connect(broker)
@@ -100,11 +101,12 @@ class Service:
         await self.event_channel.exchange_declare(self.event_exchange_name, type_name="topic", durable=True)
         # TODO: might want to set exclusive=True
         await self.event_channel.queue_declare(self.event_queue_name, durable=True)
-        await self.event_channel.basic_consume(self._on_event, queue_name=self.event_queue_name)
+        await self.event_channel.basic_consume(self._on_event, queue_name=self.event_queue_name, no_ack=True)
 
         # subscribe to all registered event routes.
         for route in self.event_routes:
-            await self.event_channel.queue_bind(self.event_queue_name, exchange_name=self.event_exchange_name, routing_key=route)
+            routing_key = path_to_routing_key(route)
+            await self.event_channel.queue_bind(self.event_queue_name, exchange_name=self.event_exchange_name, routing_key=routing_key)
 
     async def _on_command(self, channel, body, envelope, properties):
         """Handle a received command.
@@ -118,7 +120,7 @@ class Service:
         :param properties: the AMQP properties of the message which was received.
         """
         # deserialize the AMQP message body.
-        message = json.loads(body.encode("utf-8"))
+        message = json.loads(body.decode("utf-8"))
 
         # verify that there are all required fields in the message.
         try:
@@ -133,7 +135,7 @@ class Service:
 
         try:
             func = self.command_routes[path]
-        except Keyerror:
+        except KeyError:
             # TODO: report to caller / or just ignore?!
             self.logger.warning("No route for path '{0}' defined.".format(path))
             return
@@ -177,7 +179,7 @@ class Service:
             return
 
         # deserialiye the AMQP message body.
-        message = json.loads(body.encode("utf-8"))
+        message = json.loads(body.decode("utf-8"))
 
         # verify that there are all required fields in the message.
         try:
@@ -205,7 +207,7 @@ class Service:
         :param properties: the AMQP properties of the message which was received.
         """
         # deserialize the AMQP message body.
-        message = json.loads(body.encode("utf-8"))
+        message = json.loads(body.decode("utf-8"))
 
         # verify that there are all required fields in the message.
         try:
@@ -219,13 +221,13 @@ class Service:
 
         try:
             func = self.event_routes[path]
-        except Keyerror:
+        except KeyError:
             # TODO: report to caller / or just ignore?!
             self.logger.warning("No route for path '{0}' defined.".format(path))
             return
 
         # call event handler.
-        await func(path, query, headers, body)
+        await func(path, headers, body)
 
     async def call(self, service_name, path, body, query=None, headers=None, timeout=20.0, expect_response=True):
         """Call a command on a specific type of service.
@@ -304,10 +306,11 @@ class Service:
             "body": body
         }
 
+        print(path_to_routing_key(path))
         await self.event_channel.basic_publish(
-            payload=message,
+            payload=json.dumps(message),
             exchange_name=self.event_exchange_name,
-            routing_key=path.replace("/", ".")
+            routing_key=path_to_routing_key(path)
         )
 
     def subscribe(self, path):
@@ -319,6 +322,7 @@ class Service:
         """
         def decorator(func):
             """The subscribe decorator."""
+            func = asyncio.coroutine(func)
             self.event_routes[path] = func
             return func
         return decorator
