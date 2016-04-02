@@ -11,6 +11,7 @@ import asyncio
 import aioamqp
 import logging
 
+from .models import Command, Response
 from .errors import ServiceError
 from .helpers import path_to_routing_key
 
@@ -68,7 +69,7 @@ class Service:
         #: Holds all command/response transactions.
         self.command_transactions = {}
 
-    async def connect(self, broker):
+    async def connect(self, broker="localhost"):
         """Connects to the given broker.
 
         All protocol, channel and queues are setup and
@@ -90,8 +91,10 @@ class Service:
         _, self.response_protocol = await aioamqp.connect(broker)
         self.response_channel = await self.response_protocol.channel()
 
-        await self.response_channel.queue_declare(self.response_queue_name, durable=True, exclusive=True)
-        await self.response_channel.queue_bind(self.response_queue_name, exchange_name=self.rpc_exchange_name, routing_key="")
+        await self.response_channel.exchange_declare(self.rpc_exchange_name, type_name="direct", durable=True)
+        # await self.response_channel.queue_declare(self.response_queue_name, durable=True, exclusive=True)
+        await self.response_channel.queue_declare(self.response_queue_name, exclusive=True)
+        await self.response_channel.queue_bind(self.response_queue_name, exchange_name=self.rpc_exchange_name, routing_key=self.response_queue_name)
         await self.response_channel.basic_consume(self._on_response, queue_name=self.response_queue_name, no_ack=True)
 
         # setup connection to the commands channel and queue.
@@ -99,7 +102,6 @@ class Service:
         self.event_channel = await self.event_protocol.channel()
 
         await self.event_channel.exchange_declare(self.event_exchange_name, type_name="topic", durable=True)
-        # TODO: might want to set exclusive=True
         await self.event_channel.queue_declare(self.event_queue_name, durable=True)
         await self.event_channel.basic_consume(self._on_event, queue_name=self.event_queue_name, no_ack=True)
 
@@ -119,36 +121,34 @@ class Service:
         :param envelope: the metadata about the message which was received.
         :param properties: the AMQP properties of the message which was received.
         """
-        # deserialize the AMQP message body.
-        message = json.loads(body.decode("utf-8"))
-
-        # verify that there are all required fields in the message.
-        try:
-            path = message["path"]
-            query = message["query"]
-            headers = message["headers"]
-            body = message["body"]
-        except KeyError as e:
-            # TODO: report to caller
-            self.logger.warning("Missing '{0}' field in message.".format(e))
-            return
+        # create a command instance from AMQP message body.
+        command = Command.loads(body)
 
         try:
-            func = self.command_routes[path]
+            func = self.command_routes[command.path]
         except KeyError:
             # TODO: report to caller / or just ignore?!
-            self.logger.warning("No route for path '{0}' defined.".format(path))
+            self.logger.warning("No route for path '{0}' defined.".format(command.path))
             return
 
         # call command handler and wait for response.
-        response = await func(path, query, headers, body)
+        response = await func(command.path, command.query, command.headers, command.body)
         if not properties.reply_to:
             # no response is required - just ignore the response given by the command handler.
             return
 
+        if not isinstance(response, Response):
+            if isinstance(response, tuple):
+                body, headers = response
+            else:
+                body = response
+                headers = None
+
+            response = Response(command.path, body, headers)
+
         # send response to caller
         await self.command_channel.basic_publish(
-            payload=json.dumps(response),
+            payload=str(response),
             exchange_name=self.rpc_exchange_name,
             routing_key=properties.reply_to,
             properties={
@@ -179,20 +179,10 @@ class Service:
             return
 
         # deserialiye the AMQP message body.
-        message = json.loads(body.decode("utf-8"))
-
-        # verify that there are all required fields in the message.
-        try:
-            headers = message["headers"]
-            status_code = message["status_code"]
-            body = message["body"]
-        except KeyError as e:
-            # TODO: report to caller
-            self.logger.warning("Missing '{0}' field in message.".format(e))
-            return
+        response = Response.loads(body)
 
         # set response message and trigger event.
-        transaction["message"] = headers, status_code, body
+        transaction["message"] = response
         transaction["event"].set()
 
     async def _on_event(self, channel, body, envelope, properties):
@@ -243,10 +233,7 @@ class Service:
         :returns: the response of the command call if expected or nothing.
         :rtype: tuple
         """
-        message = {
-            "path": path, "query": query or {},
-            "headers": headers or {}, "body": body
-        }
+        command = Command(path, query, body, headers)
         message_id = str(uuid.uuid4())
 
         properties={}
@@ -262,7 +249,7 @@ class Service:
 
         # send command to the rpc exchange
         await self.command_channel.basic_publish(
-            payload=json.dumps(message),
+            payload=str(command),
             exchange_name=self.rpc_exchange_name,
             routing_key=service_name,
             properties=properties
@@ -278,8 +265,10 @@ class Service:
             self.logger.error("No response received for message '{0}' within {1} seconds.".format(
                 message_id, timeout))
             raise
-
-        return transaction["message"]
+        else:
+            return transaction["message"]
+        finally:
+            del self.command_transactions[message_id]
 
     def route(self, path):
         """Register to a command sent with the given path.
@@ -306,7 +295,6 @@ class Service:
             "body": body
         }
 
-        print(path_to_routing_key(path))
         await self.event_channel.basic_publish(
             payload=json.dumps(message),
             exchange_name=self.event_exchange_name,
@@ -322,7 +310,6 @@ class Service:
         """
         def decorator(func):
             """The subscribe decorator."""
-            func = asyncio.coroutine(func)
             self.event_routes[path] = func
             return func
         return decorator
