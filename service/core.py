@@ -11,7 +11,7 @@ import asyncio
 import aioamqp
 import logging
 
-from .models import Command, Response
+from .models import Command, Response, Event
 from .errors import ServiceError
 from .helpers import path_to_routing_key
 
@@ -213,28 +213,19 @@ class Service:
         :param properties: the AMQP properties of the message which was received.
         """
         self.logger.debug("Received Event '%s'.", body)
+
         # deserialize the AMQP message body.
-        message = json.loads(body.decode("utf-8"))
-
-        # verify that there are all required fields in the message.
-        try:
-            path = message["path"]
-            headers = message["headers"]
-            body = message["body"]
-        except KeyError as e:
-            # TODO: report to caller
-            self.logger.warning("Missing '%s' field in message.", e)
-            return
+        event = Event.loads(body)
 
         try:
-            func = self.event_routes[path]
+            func = self.event_routes[event.path]
         except KeyError:
             # TODO: report to caller / or just ignore?!
-            self.logger.warning("No route for path '%s' defined.", path)
+            self.logger.warning("No route for path '%s' defined.", event.path)
             return
 
         # call event handler.
-        await func(path, headers, body)
+        await func(event.path, event.headers, event.body)
 
     async def call(self, service_name, path, body, query=None, headers=None, timeout=20.0, expect_response=True):
         """Call a command on a specific type of service.
@@ -312,18 +303,15 @@ class Service:
         :param dict body: the body of the event.
         :param dict headers: optional headers of the event.
         """
-        message = {
-            "path": path, "headers": headers or {},
-            "body": body
-        }
+        event = Event(path, body, headers)
 
         await self.event_channel.basic_publish(
-            payload=json.dumps(message),
+            payload=str(event),
             exchange_name=self.event_exchange_name,
             routing_key=path_to_routing_key(path)
         )
 
-        self.logger.debug("Published event '%s' for '%s'.", message, path)
+        self.logger.debug("Published event '%s' for '%s'.", event, path)
 
     def subscribe(self, path):
         """Subscribe to an event published with the given path.
