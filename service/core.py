@@ -44,7 +44,7 @@ class Service:
         self.command_queue_name = "{0}".format(self.name)
 
         #: Holds the name of the response queue
-        self.response_queue_name = "{0}-responses".format(self.name)
+        self.response_queue_name = "{0}-responses-{1}".format(self.name, str(uuid.uuid4()))
 
         #: Holds the name of the event queue
         self.event_queue_name = "{0}-events".format(self.name)
