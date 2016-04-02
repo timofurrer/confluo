@@ -12,6 +12,7 @@
 """
 
 import json
+import asyncio
 
 from .errors import ServiceError
 
@@ -109,3 +110,17 @@ class Event(ProtocolModel):
 
     def __init__(self, path, body, headers=None):
         super().__init__(path=path, body=body, headers=headers)
+
+
+class CommandTransaction:
+    """Represents a Command transaction.
+
+    It contains the received Response and
+    an Event object.
+    """
+    def __init__(self):
+        #: Holds the event object
+        self.event = asyncio.Event()
+
+        #: Holds the received Response for the Command.
+        self.response = None

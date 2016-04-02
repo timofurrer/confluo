@@ -13,7 +13,7 @@ import asyncio
 import aioamqp
 import logging
 
-from .models import Command, Response, Event
+from .models import Command, Response, Event, CommandTransaction
 from .errors import ServiceError
 from .helpers import path_to_routing_key
 
@@ -208,8 +208,8 @@ class Service:
         response = Response.loads(body)
 
         # set response message and trigger event.
-        transaction["message"] = response
-        transaction["event"].set()
+        transaction.response = response
+        transaction.event.set()
 
     async def _on_event(self, channel, body, envelope, properties):
         """Handle a received event.
@@ -255,14 +255,12 @@ class Service:
         message_id = str(uuid.uuid4())
 
         properties={}
-        event = None
         if expect_response:
             properties["reply_to"] = self.response_queue_name
             properties["correlation_id"] = message_id
 
             # register command/response transaction
-            event = asyncio.Event()
-            transaction = {"event": event, "message": None}
+            transaction = CommandTransaction()
             self.command_transactions[message_id] = transaction
 
         # send command to the rpc exchange
@@ -283,13 +281,13 @@ class Service:
                           command, service_name, properties["reply_to"])
 
         try:
-            await asyncio.wait_for(event.wait(), timeout)
+            await asyncio.wait_for(transaction.event.wait(), timeout)
         except asyncio.TimeoutError:
             self.logger.error("No response received for message '%s' within %s seconds.",
                 message_id, timeout)
             raise
         else:
-            return transaction["message"]
+            return transaction.response
         finally:
             del self.command_transactions[message_id]
 
