@@ -156,7 +156,8 @@ class Service:
             })
 
         # send acknowledge for this command message.
-        await self.command_channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
+        # FIXME: why don't I get the response if I ack the message?!
+        # await self.command_channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
 
     async def _on_response(self, channel, body, envelope, properties):
         """Handle a received response.
