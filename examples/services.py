@@ -21,7 +21,7 @@ if __name__ == "__main__":
     a = Service("A", loop=loop)
     b = Service("B", loop=loop)
 
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
 
     @b.subscribe("/foo/bar")
     async def foo_bar(path, headers, body):
