@@ -1,6 +1,8 @@
 """
     `skynet-service` - Microservice base for a component in skynet.
 
+    This module contains the Service class for a component in skynet.
+
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details
 """
@@ -21,10 +23,12 @@ class Service:
 
     :param str name: the name of this skynet service.
     :param asyncio.BaseEventLoop loop: the event loop to use to run this service.
-                                       if no event loop is given the ``asyncio.get_event_loop``
+                                       If no event loop is given the ``asyncio.get_event_loop``
                                        is used.
+    :param logging.Logger logger: the logger instance to use for this service.
+                                  If no logger is given a new ``logging.getLogger()`` is created.
     """
-    def __init__(self, name, loop=None):
+    def __init__(self, name, loop=None, logger=None):
         #: Holds the name of this skynet service.
         self.name = name
 
@@ -32,7 +36,7 @@ class Service:
         self.loop = loop or asyncio.get_event_loop()
 
         #: Holds the service logger
-        self.logger = logging.getLogger(self.name)
+        self.logger = logger or logging.getLogger(self.name)
 
         #: Holds the RPC exchange name
         self.rpc_exchange_name = "rpc"
@@ -298,6 +302,8 @@ class Service:
         """
         def decorator(func):
             """The route decorator."""
+            if path in self.command_routes:
+                raise ServiceError("Command route with path '{0}' already registered.".format(path))
             self.command_routes[path] = func
             return func
         return decorator
@@ -328,6 +334,8 @@ class Service:
         """
         def decorator(func):
             """The subscribe decorator."""
+            if path in self.event_routes:
+                raise ServiceError("Event route with path '{0}' already registered.".format(path))
             self.event_routes[path] = func
             return func
         return decorator
