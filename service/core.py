@@ -20,13 +20,16 @@ class Service:
     """Represents a skynet microservice component.
 
     :param str name: the name of this skynet service.
+    :param asyncio.BaseEventLoop loop: the event loop to use to run this service.
+                                       if no event loop is given the ``asyncio.get_event_loop``
+                                       is used.
     """
-    def __init__(self, name, loop):
+    def __init__(self, name, loop=None):
         #: Holds the name of this skynet service.
         self.name = name
 
         #: Holds the asyncio loop
-        self.loop = loop
+        self.loop = loop or asyncio.get_event_loop()
 
         #: Holds the service logger
         self.logger = logging.getLogger(self.name)
@@ -147,7 +150,7 @@ class Service:
             response = Response(command.path, body, headers)
 
         # send response to caller
-        await self.command_channel.basic_publish(
+        await channel.basic_publish(
             payload=str(response),
             exchange_name=self.rpc_exchange_name,
             routing_key=properties.reply_to,
@@ -157,7 +160,7 @@ class Service:
 
         # send acknowledge for this command message.
         # FIXME: why don't I get the response if I ack the message?!
-        # await self.command_channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
+        # await channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
 
     async def _on_response(self, channel, body, envelope, properties):
         """Handle a received response.

@@ -27,8 +27,8 @@ if __name__ == "__main__":
         print("Send cmd to service A")
         response = await b.call("A", "/first/cmd", {"data": "Some body data"})
         print("Got response {0}".format(response))
-        # response = await b.call("A", "/first/cmd", {"data": "Some body data"})
-        # print("Got response {0}".format(response))
+        response = await b.call("A", "/first/cmd", {"data": "Some body data"})
+        print("Got response {0}".format(response))
 
     @a.route("/first/cmd")
     async def first_cmd(path, query, headers, body):
@@ -47,5 +47,5 @@ if __name__ == "__main__":
     loop.run_until_complete(a.publish("/foo/bar", "wtf"))
     task = asyncio.Task(b.call("A", "/first/cmd", {"data": "Some other data"}))
     task.add_done_callback(got_response)
-    loop.run_until_complete(task)
+    # loop.run_until_complete(task)
     loop.run_forever()
