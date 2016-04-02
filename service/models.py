@@ -92,10 +92,10 @@ class Response(ProtocolModel):
     :param dict body: the body for this response.
     :param dict headers: the headers for this response.
     """
-    FIELDS = ["path", "body", "headers"]
+    FIELDS = ["path", "body", "status_code", "headers"]
 
-    def __init__(self, path, body, headers=None):
-        super().__init__(path=path, body=body, headers=headers)
+    def __init__(self, path, body, status_code=200, headers=None):
+        super().__init__(path=path, body=body, status_code=status_code, headers=headers)
 
 
 class Event(ProtocolModel):

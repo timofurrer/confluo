@@ -156,12 +156,13 @@ class Service:
 
         if not isinstance(response, Response):
             if isinstance(response, tuple):
-                body, headers = response
+                body, status_code, headers = response
             else:
                 body = response
+                status_code = 200
                 headers = None
 
-            response = Response(command.path, body, headers)
+            response = Response(command.path, body, status_code, headers)
 
         # send response to caller
         await channel.basic_publish(
