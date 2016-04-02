@@ -90,6 +90,8 @@ class Service:
         await self.command_channel.queue_bind(self.command_queue_name, exchange_name=self.rpc_exchange_name, routing_key=self.command_queue_name)
         await self.command_channel.basic_consume(self._on_command, queue_name=self.command_queue_name, no_ack=True)
 
+        self.logger.debug("Connected to command channel and created queue %s.", self.command_queue_name)
+
         # setup connection to the response channel and queue.
         _, self.response_protocol = await aioamqp.connect(broker)
         self.response_channel = await self.response_protocol.channel()
@@ -100,6 +102,8 @@ class Service:
         await self.response_channel.queue_bind(self.response_queue_name, exchange_name=self.rpc_exchange_name, routing_key=self.response_queue_name)
         await self.response_channel.basic_consume(self._on_response, queue_name=self.response_queue_name, no_ack=True)
 
+        self.logger.debug("Connected to response channel and created queue %s.", self.response_queue_name)
+
         # setup connection to the commands channel and queue.
         _, self.event_protocol = await aioamqp.connect(broker)
         self.event_channel = await self.event_protocol.channel()
@@ -108,10 +112,13 @@ class Service:
         await self.event_channel.queue_declare(self.event_queue_name, durable=True)
         await self.event_channel.basic_consume(self._on_event, queue_name=self.event_queue_name, no_ack=True)
 
+        self.logger.debug("Connected to event channel and created queue %s.", self.event_queue_name)
+
         # subscribe to all registered event routes.
         for route in self.event_routes:
             routing_key = path_to_routing_key(route)
             await self.event_channel.queue_bind(self.event_queue_name, exchange_name=self.event_exchange_name, routing_key=routing_key)
+            self.logger.debug("Subscribed to event %s on event channel %s.", routing_key, self.event_channel)
 
     async def _on_command(self, channel, body, envelope, properties):
         """Handle a received command.
@@ -124,6 +131,7 @@ class Service:
         :param envelope: the metadata about the message which was received.
         :param properties: the AMQP properties of the message which was received.
         """
+        self.logger.debug("Received Command '%s' in message '%s'", body, properties.message_id)
         # create a command instance from AMQP message body.
         command = Command.loads(body)
 
@@ -131,13 +139,14 @@ class Service:
             func = self.command_routes[command.path]
         except KeyError:
             # TODO: report to caller / or just ignore?!
-            self.logger.warning("No route for path '{0}' defined.".format(command.path))
+            self.logger.warning("No route for path '%s' defined.", command.path)
             return
 
         # call command handler and wait for response.
         response = await func(command.path, command.query, command.headers, command.body)
         if not properties.reply_to:
             # no response is required - just ignore the response given by the command handler.
+            self.logger.debug("Do not send response for Command %s because no reply_to is given.", properties.message_id)
             return
 
         if not isinstance(response, Response):
@@ -158,6 +167,8 @@ class Service:
                 "correlation_id": properties.correlation_id
             })
 
+        self.logger.debug("Sent response '%s' for Command '%s'.", response, properties.message_id)
+
         # send acknowledge for this command message.
         # FIXME: why don't I get the response if I ack the message?!
         # await channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
@@ -174,12 +185,13 @@ class Service:
         :param envelope: the metadata about the message which was received.
         :param properties: the AMQP properties of the message which was received.
         """
+        self.logger.debug("Received Response '%s' for Command '%s'.", body, properties.correlation_id)
         # check if this service is waiting for the received response.
         try:
             transaction = self.command_transactions[properties.correlation_id]
         except KeyError:
-            self.logger.warning("Received martian response for message: {0}".format(
-                properties.correlation_id))
+            self.logger.warning("Received martian response for message: %s",
+                properties.correlation_id)
             return
 
         # deserialiye the AMQP message body.
@@ -200,6 +212,7 @@ class Service:
         :param envelope: the metadata about the message which was received.
         :param properties: the AMQP properties of the message which was received.
         """
+        self.logger.debug("Received Event '%s'.", body)
         # deserialize the AMQP message body.
         message = json.loads(body.decode("utf-8"))
 
@@ -210,14 +223,14 @@ class Service:
             body = message["body"]
         except KeyError as e:
             # TODO: report to caller
-            self.logger.warning("Missing '{0}' field in message.".format(e))
+            self.logger.warning("Missing '%s' field in message.", e)
             return
 
         try:
             func = self.event_routes[path]
         except KeyError:
             # TODO: report to caller / or just ignore?!
-            self.logger.warning("No route for path '{0}' defined.".format(path))
+            self.logger.warning("No route for path '%s' defined.", path)
             return
 
         # call event handler.
@@ -261,13 +274,18 @@ class Service:
 
         # no response is expected.
         if not expect_response:
+            self.logger.debug("Sent Command '%s' to '%s' and do not expect Response.",
+                              command, service_name)
             return
+
+        self.logger.debug("Sent Command '%s' to '%s' and wait for Response on '%s'.",
+                          command, service_name, properties["reply_to"])
 
         try:
             await asyncio.wait_for(event.wait(), timeout)
         except asyncio.TimeoutError:
-            self.logger.error("No response received for message '{0}' within {1} seconds.".format(
-                message_id, timeout))
+            self.logger.error("No response received for message '%s' within %s seconds.",
+                message_id, timeout)
             raise
         else:
             return transaction["message"]
@@ -304,6 +322,8 @@ class Service:
             exchange_name=self.event_exchange_name,
             routing_key=path_to_routing_key(path)
         )
+
+        self.logger.debug("Published event '%s' for '%s'.", message, path)
 
     def subscribe(self, path):
         """Subscribe to an event published with the given path.
