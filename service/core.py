@@ -49,6 +49,11 @@ class Service:
         #: Holds the name of the event queue
         self.event_queue_name = "{0}-events".format(self.name)
 
+        #: Holds the aioamqp transport layers
+        self.command_transport = None
+        self.response_transport = None
+        self.event_transport = None
+
         #: Holds the aioamqp protocol
         self.command_protocol = None
         self.response_protocol = None
@@ -82,7 +87,7 @@ class Service:
                            This must be an AMQP broker like RabbitMQ.
         """
         # setup connection to the command channel and queue.
-        _, self.command_protocol = await aioamqp.connect(broker)
+        self.command_transport, self.command_protocol = await aioamqp.connect(broker)
         self.command_channel = await self.command_protocol.channel()
 
         await self.command_channel.exchange_declare(self.rpc_exchange_name, type_name="direct", durable=True)
@@ -93,7 +98,7 @@ class Service:
         self.logger.debug("Connected to command channel and created queue %s.", self.command_queue_name)
 
         # setup connection to the response channel and queue.
-        _, self.response_protocol = await aioamqp.connect(broker)
+        self.response_transport, self.response_protocol = await aioamqp.connect(broker)
         self.response_channel = await self.response_protocol.channel()
 
         await self.response_channel.exchange_declare(self.rpc_exchange_name, type_name="direct", durable=True)
@@ -105,7 +110,7 @@ class Service:
         self.logger.debug("Connected to response channel and created queue %s.", self.response_queue_name)
 
         # setup connection to the commands channel and queue.
-        _, self.event_protocol = await aioamqp.connect(broker)
+        self.event_transport, self.event_protocol = await aioamqp.connect(broker)
         self.event_channel = await self.event_protocol.channel()
 
         await self.event_channel.exchange_declare(self.event_exchange_name, type_name="topic", durable=True)
@@ -325,3 +330,23 @@ class Service:
             self.event_routes[path] = func
             return func
         return decorator
+
+    async def shutdown(self):
+        """Shutdown all open AMQP protocols and transports.
+
+        This method should be called before stopping the event loop.
+        """
+        # close command protocol and transport
+        await self.command_protocol.close()
+        self.command_transport.close()
+        self.logger.debug("Closed command protocol and transport layer.")
+
+        # close response protocol and transport
+        await self.response_protocol.close()
+        self.response_transport.close()
+        self.logger.debug("Closed response protocol and transport layer.")
+
+        # close event protocol and transport
+        await self.event_protocol.close()
+        self.event_transport.close()
+        self.logger.debug("Closed even nrotocol and transport layer.")

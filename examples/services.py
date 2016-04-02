@@ -51,5 +51,10 @@ if __name__ == "__main__":
     loop.run_until_complete(a.publish("/foo/bar", "wtf"))
     task = asyncio.Task(b.call("A", "/first/cmd", {"data": "Some other data"}))
     task.add_done_callback(got_response)
-    # loop.run_until_complete(task)
-    loop.run_forever()
+
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        loop.run_until_complete(asyncio.wait([a.shutdown(), b.shutdown()]))
+        loop.stop()
+        loop.close()
