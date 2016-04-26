@@ -1,8 +1,11 @@
-# skynet-service
+# confluo
 
-Micro service framework for a component in skynet.
+> From con- ‎(“with; together”) + fluō ‎(“flow”).
+> cōnfluō ‎(present infinitive cōnfluere, perfect active cōnfluxī); third conjugation, no passive
+>     (intransitive) I flow or run together, meet.
+>     (intransitive, figuratively) I flock or crowd together, throng, assemble.
 
-TBD.
+Scalable distributed microservice framework using AMQP/RabbitMQ.
 
 ## Usage
 

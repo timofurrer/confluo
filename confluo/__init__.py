@@ -1,5 +1,5 @@
 """
-    `skynet-service` - Microservice base for a component in skynet.
+    `confluo` - Scalable distributed microservice framework using AMQP/RabbitMQ
 
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details

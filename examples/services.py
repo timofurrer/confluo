@@ -1,7 +1,5 @@
 """
-    `skynet-service` - Microservice base for a component in skynet.
-
-    Example service for skynet.
+    Example service for confluo.
 
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details
@@ -10,7 +8,7 @@
 import asyncio
 import logging
 
-from service import Service
+from confluo.core import Service
 
 
 __BROKER_HOST__ = "172.17.0.2"

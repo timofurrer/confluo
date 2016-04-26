@@ -1,7 +1,7 @@
 """
-    `skynet-service` - Microservice base for a component in skynet.
+    `confluo` - Scalable distributed microservice framework using AMQP/RabbitMQ
 
-    This module contains the Service class for a component in skynet.
+    This module contains the confluo service class for a component in a confluo network.
 
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details
@@ -19,9 +19,9 @@ from .helpers import path_to_routing_key
 
 
 class Service:
-    """Represents a skynet microservice component.
+    """Represents a confluo microservice component.
 
-    :param str name: the name of this skynet service.
+    :param str name: the name of this confluo service.
     :param asyncio.BaseEventLoop loop: the event loop to use to run this service.
                                        If no event loop is given the ``asyncio.get_event_loop``
                                        is used.
@@ -29,7 +29,7 @@ class Service:
                                   If no logger is given a new ``logging.getLogger()`` is created.
     """
     def __init__(self, name, loop=None, logger=None):
-        #: Holds the name of this skynet service.
+        #: Holds the name of this confluo service.
         self.name = name
 
         #: Holds the asyncio loop

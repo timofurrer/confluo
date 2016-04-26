@@ -1,7 +1,7 @@
 """
-    `skynet-service` - Microservice base for a component in skynet.
+    `confluo` - Scalable distributed microservice framework using AMQP/RabbitMQ
 
-    This module contains helper functions for to skynet Service.
+    This module contains helper functions for the confluo service.
 
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details
