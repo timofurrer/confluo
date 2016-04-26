@@ -14,21 +14,24 @@ from confluo.core import Service
 a = Service("Service-A")
 b = Service("Service-B")
 
+
 @b.subscribe("/foo/bar")
 async def foo_bar_event(path, headers, body):
     print("Got /foo/bar event with body: '{0}'".format(body))
     response = await b.call("Service-A", "/bar", {"data": "Some body data"})
     print("Got response: '{0}'".format(response))
-        
+
+
 @a.route("/bar")
 async def bar_command(path, headers, body):
     print("Got /bar command with body: '{0}'".format(body))
     return {"value": 1}
 
+
 if __name__ == "__main__":
     # connect services
     loop.run_until_complete(asyncio.wait([a.connect(), b.connect()]))
-    
+
     # Publish event
     loop.run_until_complete(a.publish("/foo/bar", "wtf"))
 
@@ -46,4 +49,6 @@ if __name__ == "__main__":
 
 Make sure rabbitmq is installed and running. e.g:
 
-    sudo docker run -d --hostname my-rabbit --name some-rabbit rabbitmq:3-management
+```bash
+sudo docker run -d --hostname my-rabbit --name some-rabbit rabbitmq:3-management
+```
