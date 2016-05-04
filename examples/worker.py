@@ -27,11 +27,4 @@ if __name__ == "__main__":
         print("Calculated!!")
 
     # connect services
-    loop.run_until_complete(worker.connect(__BROKER_HOST__))
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        loop.run_until_complete(worker.shutdown())
-        loop.stop()
-        loop.close()
+    worker.run(__BROKER_HOST__)

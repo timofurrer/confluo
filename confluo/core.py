@@ -338,6 +338,25 @@ class Service:
             return func
         return decorator
 
+    def run(self, broker="localhost"):
+        """Run this Service in the configured event loop.
+
+        This method should only be used if you want to use
+        ``run_forever`` and this is the only Service which should run.
+
+        :param str broker: the AMQP broker to connect to.
+        """
+        # connect services
+        self.loop.run_until_complete(self.connect(broker))
+
+        try:
+            self.loop.run_forever()
+        except KeyboardInterrupt:
+            self.loop.run_until_complete(self.shutdown())
+            self.loop.stop()
+            self.loop.close()
+            raise
+
     async def shutdown(self):
         """Shutdown all open AMQP protocols and transports.
 
