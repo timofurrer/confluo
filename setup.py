@@ -24,7 +24,7 @@ setup(
     version=get_version(),
     license="MIT",
 
-    description="Scalable distributed microservice framework using AMQP/RabbitMQ",
+    description="Minimalist scalable distributed microservice framework using AMQP/RabbitMQ",
 
     author="Timo Furrer",
     author_email="tuxtimo@gmail.com",
