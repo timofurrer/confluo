@@ -29,13 +29,14 @@ async def bar_command(path, headers, body):
 
 
 if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+
     # connect services
     loop.run_until_complete(asyncio.wait([a.connect(), b.connect()]))
 
     # Publish event
     loop.run_until_complete(a.publish("/foo/bar", "wtf"))
 
-    loop = asyncio.get_event_loop()
     try:
         loop.run_forever()
     except KeyboardInterrupt:
