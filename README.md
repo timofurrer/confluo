@@ -89,3 +89,23 @@ Use the `Service.subscribe` decorator to subscribe for an event and register a h
 async def handle_my_fancy_event(path, headers, body):
     print("Got MyFancyEvent with body: {0}".format(body))
 ```
+
+### Call command
+
+You can also call a command from another specific service and retrieve it's response:
+
+```python
+response = loop.run_until_complete(
+    service.call("My-Other-Service", "MyFancyCommand", {"name": "Bruce", "nickname": "Batman"}))
+```
+
+### Handle command
+
+Use the `Service.route` decorator to register a handler for a specific command:
+
+```python
+@service.route("MyFancyCommand")
+async def handle_my_fancy_command(path, headers, body):
+    print("Got MyFancyCommand with body: {0}".format(body))
+    return {"message": "That's my awesome response"}
+```
