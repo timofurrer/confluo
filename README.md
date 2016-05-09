@@ -5,7 +5,7 @@
 > &nbsp;&nbsp;&nbsp;&nbsp;1. (intransitive) I flow or run together, meet. <br>
 > &nbsp;&nbsp;&nbsp;&nbsp;2. (intransitive, figuratively) I flock or crowd together, throng, assemble. <br>
 
-⇢ **confluo** is a minimalist scalable distributed microservice framework using AMQP/RabbitMQ as a broker.
+⇢ **confluo** is a minimalist scalable microservice framework for distributed systems using AMQP/RabbitMQ as a broker.
 
 *Note: this project is under heavy development! Contributions are more than appreciated!*
 

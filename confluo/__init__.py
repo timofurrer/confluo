@@ -1,5 +1,5 @@
 """
-    `confluo` - Scalable distributed microservice framework using AMQP/RabbitMQ
+    `confluo` - Minimalist scalable microservice framework for distributed systems using AMQP/RabbitMQ
 
     :copyright: (c) by Timo Furrer
     :license: MIT, see LICENSE for details

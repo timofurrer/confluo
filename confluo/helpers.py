@@ -1,5 +1,5 @@
 """
-    `confluo` - Scalable distributed microservice framework using AMQP/RabbitMQ
+    `confluo` - Minimalist scalable microservice framework for distributed systems using AMQP/RabbitMQ
 
     This module contains helper functions for the confluo service.
 
