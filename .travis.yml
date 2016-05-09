@@ -1,0 +1,12 @@
+language: python
+
+deploy:
+  provider: pypi
+  user: tuxtimo
+  password:
+    secure: wcc7iFEwSBSXjWLyxLWWKUgspBN5zNau93a4rNNcs4DD0BIKA3ZsNgE6zB/j5LOTV+kY3uvLl+BBY+UzZ/2+jinbpmfnebXQmnXBPuHbUyBejBzRA/jq3SXRZijwo9FGCbhK7oY2TvcftTrAILIC8OlIYYYA2klnW+roKCpdjXIj72nrGbJ4GNQc4ktwRWsHiGajSVnYWnMGEZDiUziS+1RMui8m7MQD7Dp4mbG3H5+ZwFN1/ih7senKxtplsuTyKzaZpX+vBTShmDxLugQlfudUxPkUzN6JARGd+kbKMXwBSjUzmsPK3xE3QDrpKKJVFK+67wRc6GQOChgzvu4ZXWO/NgtbRirkFtYcJnErxykZ0fgNE0IJ4U0n2gn9nvjXTX+8Nx0welGrsEpGZQo8cVQNhzl47/u1h/Lh0eyzz3W++/I6ZmFaZb3OnkK6bvR0kVytH0NNYbg/vt1OCeuc7p5BDkuGMXefqYFZDtTok3VpEY+FPQo8p4NadN6qUxFIHHrFj30fEIc5S7zgRNFFGN6S+Z0jyyTs3a5/BZZ0avT6SPsfhJUvW7H7KTXCH1A+T747yUoAkS6V7mRjlOkP1TPRq+atxf8wSA4v0ho4ESn+/+57oL9LNPU5lR3mO43VeDGtPk6myuACtfrlutB1jTZssoPtj0eTy2pEhI8CkHI=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: timofurrer/confluo
+    branch: master
