@@ -76,8 +76,16 @@ service = Service("My-First-Service", loop=loop)
 
 Every *confluo service* is able to publish events. All other services which subscribed to this event will receive it.
 
+Outside of a coroutine:
+
 ```python
 loop.run_until_complete(service.publish("MyFancyEvent", {"name": "Peter", "nickname": "Spider Man"}))
+```
+
+Inside a coroutine using the same event loop:
+
+```python
+await service.publish("MyFancyEvent", {"name": "Peter", "nickname": "Spider Man"})
 ```
 
 The first argument of the `Service.publish` method is the name of the event. You can also use a path like `/my/cool/path//event` or whatever you like. The second argument is the data sent as event body.
@@ -96,9 +104,17 @@ async def handle_my_fancy_event(path, headers, body):
 
 You can also call a command from another specific service and retrieve it's response:
 
+Outside of a coroutine:
+
 ```python
 response = loop.run_until_complete(
     service.call("My-Other-Service", "MyFancyCommand", {"name": "Bruce", "nickname": "Batman"}))
+```
+
+Iniside a coroutine using the same event loop:
+
+```python
+response = await service.call("My-Other-Service", "MyFancyCommand", {"name": "Bruce", "nickname": "Batman"})
 ```
 
 ### Handle command
