@@ -1,5 +1,7 @@
 language: python
 
+script: echo "Test"
+
 deploy:
   provider: pypi
   user: tuxtimo
