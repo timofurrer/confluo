@@ -48,6 +48,17 @@ if __name__ == "__main__":
 
 ```
 
+## Features
+
+These are the key features of **confluo**:
+
+- Pythonic and minimalist API
+- Based on python's asyncio event loop
+- Based on AMQP protocol
+- HTTP like protocol on top of AMQP
+- Send and Receive Events
+- Call Commands and Receive Responses
+
 ## Usage
 
 This section walks through the essentials in order to run a **confluo** service.
